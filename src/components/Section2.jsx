@@ -48,6 +48,7 @@ function Section2() {
     return (
         <section className="min-h-screen flex flex-col justify-start items-center bg-gray-200 text-center p-6">
             {/* Upper content with 3 paragraphs side by side, separated by dark green lines */}
+            <h2 className="text-3xl font-semibold mt-6"> Our Services</h2>
             <div className="flex flex-row justify-between items-center space-x-4 w-full max-w-4xl mt-4">
                 <p className="text-gray-800 text-lg w-1/3">
                     We offer a variety of professional services to meet the needs of homeowners and businesses. Our team of experts ensures high-quality work for every project.
@@ -63,7 +64,6 @@ function Section2() {
             </div>
 
             {/* Main content */}
-            <h2 className="text-3xl font-semibold mt-6"> Our Services</h2>
             <p className="text-gray-700 mt-4 max-w-2xl">
                 We provide top-notch services to our clients with excellence and dedication.
             </p>

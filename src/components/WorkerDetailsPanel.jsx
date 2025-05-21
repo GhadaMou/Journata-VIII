@@ -5,10 +5,10 @@ import Rating from "./Rating";
 import ReviewForm from "./ReviewForm";
 import MessageForm from "./MessageForm";
 import supabase from "../supabaseClient";
+import { FaMessage, FaStar } from 'react-icons/fa6';
 
 function WorkerDetailsPanel({ worker, workerId }) {
   const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [user, setUser] = useState(null);
@@ -16,13 +16,11 @@ function WorkerDetailsPanel({ worker, workerId }) {
   useEffect(() => {
     if (!workerId) return;
     const fetchReviews = async () => {
-      setLoading(true);
       const { data, error } = await supabase
         .from("reviews")
         .select("*")
         .eq("worker_id", workerId);
       if (!error) setReviews(data || []);
-      setLoading(false);
     };
     fetchReviews();
   }, [workerId]);
@@ -74,7 +72,7 @@ function WorkerDetailsPanel({ worker, workerId }) {
       </div>
 
       {/* Contact & About */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
           <h5 className="text-lg font-medium text-gray-700 mb-2">Contact Information</h5>
           <p className="text-gray-600"><span className="font-medium">Address:</span> {worker.address}</p>
@@ -98,23 +96,27 @@ function WorkerDetailsPanel({ worker, workerId }) {
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <button
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex-1 max-w-xs mx-auto"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex-1 max-w-xs mx-auto flex items-center justify-center gap-2"
           onClick={() => setShowMessageModal(true)}
         >
-          Message this person
+          <FaMessage className="text-lg" />
+          Send Message
         </button>
         <button
-          className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex-1 max-w-xs mx-auto"
+          className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex-1 max-w-xs mx-auto flex items-center justify-center gap-2"
           onClick={() => setShowReviewModal(true)}
         >
+          <FaStar className="text-lg" />
           Leave a Review
         </button>
       </div>
-      {showMessageModal && (
-        <MessageForm workerId={worker.user_id} onClose={() => setShowMessageModal(false)} />
-      )}
+
+      {/* Modals */}
       {showReviewModal && (
         <ReviewForm workerId={worker.user_id} onClose={() => setShowReviewModal(false)} />
+      )}
+      {showMessageModal && (
+        <MessageForm workerId={worker.user_id} onClose={() => setShowMessageModal(false)} />
       )}
 
       {/* Gallery */}

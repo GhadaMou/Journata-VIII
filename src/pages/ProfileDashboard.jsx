@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FaUser, FaEnvelope, FaMapMarkerAlt, FaBriefcase, FaPhone, FaUserTag, FaEdit } from "react-icons/fa";
 import supabase from "../supabaseClient";
 import Header from "../components/Header";
 import HandleImage from "../components/HandleImage";
 import { toast } from 'react-toastify';
 
-function ProfileHeader({ userProfile, onEditPic, onShowModal }) {
+function ProfileHeader({ userProfile, onEditPic, onShowModal, fileInputRef, onPicChange }) {
     return (
         <div className="bg-gray-100 p-10 rounded-lg shadow-md max-w-7xl mx-auto mt-12 flex items-center space-x-8 relative">
             <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-blue-500 shadow-lg relative group">
@@ -17,11 +17,17 @@ function ProfileHeader({ userProfile, onEditPic, onShowModal }) {
                 >
                     <FaEdit className="text-blue-600 text-xl" />
                 </button>
+                {/* Hidden file input for profile picture upload */}
+                <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={onPicChange}
+                />
             </div>
             <div>
                 <h2 className="text-4xl font-bold text-gray-800">{userProfile.name}</h2>
-                <p className="text-xl text-gray-500 mt-2">{userProfile.job || "No job specified"}</p>
-                <p className="text-lg text-gray-600 mt-2">{userProfile.email}</p>
                 {userProfile.created_at && (
                     <p className="text-sm text-gray-400 mt-1">Member since {new Date(userProfile.created_at).toLocaleDateString()}</p>
                 )}
@@ -128,6 +134,7 @@ function ProfileDashboard() {
     const [showModal, setShowModal] = useState(false);
     const [showPicInput, setShowPicInput] = useState(false);
     const [loading, setLoading] = useState(true);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -191,13 +198,53 @@ function ProfileDashboard() {
         }
     };
 
-    const handleEditPic = () => setShowPicInput(true);
+    const handleEditPic = () => {
+        if (fileInputRef.current) fileInputRef.current.click();
+    };
+
     const handlePicChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        // Upload logic here (e.g., to Supabase Storage)
-        toast.info("Profile picture upload not implemented in this demo.");
         setShowPicInput(false);
+        setError(null);
+        try {
+            const user = await supabase.auth.getUser();
+            if (!user?.data?.user) throw new Error('User not authenticated');
+            const userId = user.data.user.id;
+            // Upload to profile-pictures bucket
+            const filePath = `${userId}/${Date.now()}_${file.name}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('profile-pictures')
+                .upload(filePath, file, { upsert: true });
+            if (uploadError) {
+                console.error("Upload error:", uploadError);
+                throw uploadError;
+            }
+            // Get public URL
+            const { data: urlData, error: urlError } = await supabase.storage
+                .from('profile-pictures')
+                .getPublicUrl(filePath);
+            if (urlError) {
+                console.error("Get public URL error:", urlError);
+                throw urlError;
+            }
+            const imageUrl = urlData.publicUrl;
+            // Update profile_picture in profiles table
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ profile_picture: imageUrl })
+                .eq('user_id', userId);
+            if (updateError) {
+                console.error("DB update error:", updateError);
+                throw updateError;
+            }
+            setUserProfile((prev) => ({ ...prev, profile_picture: imageUrl }));
+            toast.success('Profile picture updated!');
+        } catch (err) {
+            setError(err.message);
+            toast.error('Failed to update profile picture.');
+            console.error("Profile picture upload error:", err);
+        }
     };
 
     return (
@@ -207,7 +254,13 @@ function ProfileDashboard() {
                 {/* Left: Profile + Images */}
                 <div className="w-1/2 flex flex-col gap-8">
                     <div className="flex-1 flex items-center justify-center">
-                        <ProfileHeader userProfile={userProfile} onEditPic={handleEditPic} onShowModal={() => setShowModal(true)} />
+                        <ProfileHeader 
+                            userProfile={userProfile} 
+                            onEditPic={handleEditPic} 
+                            onShowModal={() => setShowModal(true)} 
+                            fileInputRef={fileInputRef}
+                            onPicChange={handlePicChange}
+                        />
                     </div>
                     <div className="flex-1 flex items-center justify-center">
                         <ProfileImages userId={userProfile.user_id} />

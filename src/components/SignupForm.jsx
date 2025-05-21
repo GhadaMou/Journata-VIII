@@ -1,6 +1,7 @@
 import { useState } from "react";
 import supabase from "../supabaseClient";
 import {User,Mail,Lock,Phone,Briefcase,MapPin,Info,UserCog,Users,} from "lucide-react";
+import { toast } from "react-toastify";
 
 function SignupForm({ closeModal }) {
   const [formData, setFormData] = useState({
@@ -64,19 +65,21 @@ function SignupForm({ closeModal }) {
         address,
         role,
         description,
+        email,
         ...(role === "worker" && { job, phone }),
       };
 
       const { error: dbError } = await supabase.from("profiles").insert([profileData]);
       if (dbError) throw dbError;
 
-      alert("Sign-up successful! Check your email to verify.");
-      closeModal();
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+      toast.success("Singn-up successful");
+                  closeModal();
+              } catch (error) {
+                  setError(error.message);
+                  toast.error(error.message);
+              } finally {
+                  setLoading(false);
+              }
   };
 
   return (

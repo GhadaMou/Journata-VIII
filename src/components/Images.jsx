@@ -6,6 +6,7 @@ const Images = ({ userId }) => {
     const [images, setImages] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(false);
 
     // Fetch images associated with the logged-in user
     useEffect(() => {
@@ -40,6 +41,7 @@ const Images = ({ userId }) => {
 
         setIsUploading(true);
         setError(null);
+        setSuccess(false);
 
         try {
             // Upload the image to the Supabase Storage bucket
@@ -69,9 +71,9 @@ const Images = ({ userId }) => {
             if (fetchError) throw fetchError;
 
             setImages(imagesData);
-
-            alert("Image uploaded successfully!");
             setNewImage(null);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 2000);
         } catch (error) {
             setError(`Error: ${error.message}`);
             console.error("Error uploading image:", error);
@@ -108,8 +110,8 @@ const Images = ({ userId }) => {
             if (fetchError) throw fetchError;
 
             setImages(imagesData);
-
-            alert("Image deleted successfully!");
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 2000);
         } catch (error) {
             setError(`Error: ${error.message}`);
             console.error("Error deleting image:", error);
@@ -134,7 +136,11 @@ const Images = ({ userId }) => {
                 >
                     {isUploading ? "Uploading..." : "Upload Image"}
                 </button>
+                {isUploading && <span className="text-blue-600 ml-2">Uploading image, please wait...</span>}
             </div>
+
+            {/* Success Message */}
+            {success && <p className="text-green-500">Image uploaded successfully!</p>}
 
             {/* Error Message */}
             {error && <p className="text-red-500">{error}</p>}

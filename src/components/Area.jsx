@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { useData } from "../contexts/MyContext";
 import Rating from "./Rating";
 import ReviewForm from "./ReviewForm";
-import MessageForm from "./MessageForm";
 import supabase from "../supabaseClient";
 
 function Area() {
     const { selected } = useData();
     const [showReviewModal, setShowReviewModal] = useState(false);
-    const [showMessageModal, setShowMessageModal] = useState(false);
     const [user, setUser] = useState(null);
 
     // Listen for auth state changes
@@ -86,12 +84,6 @@ function Area() {
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <button
-                        className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex-1 max-w-xs mx-auto"
-                        onClick={() => setShowMessageModal(true)}
-                    >
-                        Message this person
-                    </button>
-                    <button
                         className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex-1 max-w-xs mx-auto"
                         onClick={() => setShowReviewModal(true)}
                     >
@@ -100,12 +92,6 @@ function Area() {
                 </div>
 
                 {/* Modals */}
-                {showMessageModal && (
-                    <MessageForm
-                        workerId={selected.user_id}
-                        onClose={() => setShowMessageModal(false)}
-                    />
-                )}
                 {showReviewModal && (
                     <ReviewForm
                         workerId={selected.user_id}
