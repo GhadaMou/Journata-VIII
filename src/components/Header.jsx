@@ -4,9 +4,9 @@ import supabase from "../supabaseClient";
 import SignupForm from "./SignupForm";
 import LoginForm from "./LoginForm";
 import { useData } from "../contexts/MyContext";
-import { FaBriefcase, FaUser, FaEnvelope, FaSignOutAlt, FaSignInAlt, FaUserPlus } from "react-icons/fa";
+import { FaBriefcase, FaUser, FaEnvelope, FaSignOutAlt, FaSignInAlt, FaUserPlus, FaClipboardList } from "react-icons/fa";
 import MyInbox from "./MyInbox";
-
+import ServiceRequestsSection from "./ServiceRequestsSection";
 
 function Header() {
     const navigate = useNavigate();
@@ -16,6 +16,10 @@ function Header() {
     const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isInboxModalOpen, setIsInboxModalOpen] = useState(false);
+    const [isWorker, setIsWorker] = useState(false);
+    const [showServiceRequestsPanel, setShowServiceRequestsPanel] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -24,7 +28,7 @@ function Header() {
                 setUser(user);
                 const { data, error } = await supabase
                     .from("profiles")
-                    .select("name")
+                    .select("name, role")
                     .eq("user_id", user.id)
                     .single();
 
@@ -32,48 +36,66 @@ function Header() {
                     console.log("Error fetching profile:", error);
                 } else {
                     setUserProfile(data);
+                    setIsWorker(data.role === 'worker');
                 }
             }
         };
-
         fetchUser();
     }, []);
 
-    const handleReply = async (message) => {
-        if (!replyContent.trim()) return;
-
-        try {
-            const { error } = await supabase.from("messages").insert([
-                {
-                    sender_id: user.id,
-                    receiver_id: message.sender_id,
-                    content: replyContent,
-                },
-            ]);
-
-            if (error) throw error;
-
-            setReplyContent("");
-            setReplyingTo(null);
-
-            // Refresh messages
-            const { data, error: fetchError } = await supabase
+    // Real-time unread messages count
+    useEffect(() => {
+        if (!user) return;
+        let messageSubscription;
+        const fetchUnread = async () => {
+            // If you have an is_read field, use it. Otherwise, count all messages where receiver_id = user.id and not opened in inbox.
+            const { data, error } = await supabase
                 .from("messages")
-                .select("id, content, created_at, sender_id, receiver_id")
+                .select("id")
                 .eq("receiver_id", user.id)
-                .order("created_at", { ascending: false });
+                .is("is_read", false);
+            setUnreadCount(data ? data.length : 0);
+        };
+        fetchUnread();
+        messageSubscription = supabase
+            .channel('public:messages')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => {
+                fetchUnread();
+            })
+            .subscribe();
+        return () => {
+            if (messageSubscription) supabase.removeChannel(messageSubscription);
+        };
+    }, [user]);
 
-            if (!fetchError) {
-                setMessages(data);
-            }
-        } catch (error) {
-            console.error("Error sending reply:", error.message);
-        }
-    };
+    // Real-time pending service requests count (for workers)
+    useEffect(() => {
+        if (!user || !isWorker) return;
+        let requestSubscription;
+        const fetchPending = async () => {
+            const { data, error } = await supabase
+                .from("service_requests")
+                .select("id")
+                .eq("worker_id", user.id)
+                .eq("status", "pending");
+            setPendingRequestsCount(data ? data.length : 0);
+        };
+        fetchPending();
+        requestSubscription = supabase
+            .channel('public:service_requests')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests' }, payload => {
+                fetchPending();
+            })
+            .subscribe();
+        return () => {
+            if (requestSubscription) supabase.removeChannel(requestSubscription);
+        };
+    }, [user, isWorker]);
 
     const closeSignupModal = () => setIsSignupModalOpen(false);
     const closeLoginModal = () => setIsLoginModalOpen(false);
     const closeInboxModal = () => setIsInboxModalOpen(false);
+    const closeServiceRequestsPanel = () => setShowServiceRequestsPanel(false);
 
     const handleClick = () => {
         navigate("/");
@@ -117,9 +139,12 @@ function Header() {
         setIsInboxModalOpen(!isInboxModalOpen);
     };
 
+    const toggleServiceRequestsPanel = () => {
+        setShowServiceRequestsPanel((prev) => !prev);
+    };
+
     return (
         <header className="fixed top-0 left-0 w-full py-2 px-6 flex justify-between items-center shadow-md backdrop-blur-lg z-50 bg-gradient-to-r from-white via blue-400 via-blue-900 to-black">
-
             <h1 className="text-3xl font-extrabold text-white tracking-wide italic transform transition-all hover:scale-110 flex items-center gap-2 cursor-pointer" onClick={handleClick}>
                 <div className="relative">
                     <div className="absolute inset-0 bg-white/40 blur-xl rounded-full scale-110"></div>
@@ -132,38 +157,66 @@ function Header() {
             </h1>
 
             <nav className="flex space-x-6">
-                    <button
-                className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2"
-                onClick={() => navigate("/app")}
+                <button
+                    className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2 relative"
+                    onClick={() => navigate("/app")}
                 >
-                <FaBriefcase /> Browse Offers
-                        </button>
-                { user ? (
+                    <FaBriefcase /> Browse Offers
+                </button>
+                {user ? (
                     <div className="text-white flex items-center space-x-4">
                         <span>Welcome, {userProfile ? userProfile.name : "Loading..."}</span>
                         <button
-                className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2"
-                onClick={navigateToProfile}
-                >
-                <FaUser /> My Profile
-                </button>
+                            className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2 relative"
+                            onClick={navigateToProfile}
+                        >
+                            <FaUser /> My Profile
+                        </button>
 
+                        <button
+                            className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2 relative"
+                            onClick={toggleInboxModal}
+                        >
+                            <FaEnvelope /> My Inbox
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow">{unreadCount}</span>
+                            )}
+                        </button>
 
-                <button
-                className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2"
-                onClick={toggleInboxModal}
-                >
-                <FaEnvelope /> My Inbox
-                </button>
+                        {isWorker && (
+                            <div className="relative">
+                                <button
+                                    className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2 relative"
+                                    onClick={toggleServiceRequestsPanel}
+                                >
+                                    <FaClipboardList /> Service Requests
+                                    {pendingRequestsCount > 0 && (
+                                        <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2 py-0.5 font-bold shadow">{pendingRequestsCount}</span>
+                                    )}
+                                </button>
+                                {showServiceRequestsPanel && (
+                                    <div className="fixed top-16 right-8 w-[700px] max-w-full z-50">
+                                        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+                                            <ServiceRequestsSection />
+                                            <button
+                                                onClick={closeServiceRequestsPanel}
+                                                className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10"
+                                                title="Close"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-
-                <button
-                className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2"
-                onClick={handleLogout}
-                >
-                <FaSignOutAlt /> Log Out
-                </button>
-
+                        <button
+                            className="px-6 py-2 bg-black/5 text-white rounded-full font-medium tracking-wide hover:bg-black/15 transition flex items-center gap-2"
+                            onClick={handleLogout}
+                        >
+                            <FaSignOutAlt /> Log Out
+                        </button>
                     </div>
                 ) : (
                     <>

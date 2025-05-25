@@ -3,14 +3,14 @@ import Gallery from "./Gallery";
 import WorkerReviews from "./WorkerReviews";
 import Rating from "./Rating";
 import ReviewForm from "./ReviewForm";
-import MessageForm from "./MessageForm";
+import ServiceRequestForm from "./ServiceRequestForm";
 import supabase from "../supabaseClient";
-import { FaMessage, FaStar } from 'react-icons/fa6';
+import { FaClipboardList, FaStar } from 'react-icons/fa6';
 
 function WorkerDetailsPanel({ worker, workerId }) {
   const [reviews, setReviews] = useState([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -97,10 +97,10 @@ function WorkerDetailsPanel({ worker, workerId }) {
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <button
           className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex-1 max-w-xs mx-auto flex items-center justify-center gap-2"
-          onClick={() => setShowMessageModal(true)}
+          onClick={() => setShowServiceRequestModal(true)}
         >
-          <FaMessage className="text-lg" />
-          Send Message
+          <FaClipboardList className="text-lg" />
+          Request Service
         </button>
         <button
           className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex-1 max-w-xs mx-auto flex items-center justify-center gap-2"
@@ -115,8 +115,8 @@ function WorkerDetailsPanel({ worker, workerId }) {
       {showReviewModal && (
         <ReviewForm workerId={worker.user_id} onClose={() => setShowReviewModal(false)} />
       )}
-      {showMessageModal && (
-        <MessageForm workerId={worker.user_id} onClose={() => setShowMessageModal(false)} />
+      {showServiceRequestModal && (
+        <ServiceRequestForm workerId={worker.user_id} onClose={() => setShowServiceRequestModal(false)} />
       )}
 
       {/* Gallery */}

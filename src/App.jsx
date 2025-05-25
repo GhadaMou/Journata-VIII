@@ -6,6 +6,7 @@ import ProfileDashboard from "./pages/ProfileDashboard";
 import MyInbox from "./components/MyInbox";
 import ResetPassword from "./components/ResetPassword";
 import LoginForm from "./components/LoginForm";
+import ServiceRequestsPage from "./pages/ServiceRequestsPage";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -19,7 +20,7 @@ function App() {
         <Route path="profile" element={ <ProfileDashboard /> } />
         <Route path="/inbox" element={<MyInbox />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-
+        <Route path="/service-requests" element={<ServiceRequestsPage />} />
       </Routes>
       <ToastContainer />
     </BrowserRouter>
