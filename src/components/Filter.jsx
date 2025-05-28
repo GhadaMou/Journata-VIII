@@ -63,7 +63,7 @@ function FilterSection(props) {
             <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
                     onClick={handleClick}    
                     >
-                        Apply filters
+                        Search
                     </button>
             <div className="flex-1"></div>
         </div>
