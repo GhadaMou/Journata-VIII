@@ -14,6 +14,7 @@ function ResetPassword() {
 
     useEffect(() => {
         const accessToken = searchParams.get("access_token");
+        console.log("Access token from URL:", accessToken);
         if (!accessToken) {
             setError("Invalid or missing token. Please request a new password reset link.");
         }
@@ -23,6 +24,7 @@ function ResetPassword() {
         e.preventDefault();
         setError("");
         setLoading(true);
+        
 
         // Validate passwords
         if (newPassword.length < 6) {
