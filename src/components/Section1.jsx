@@ -8,23 +8,21 @@ function Section1() {
     const navigate = useNavigate();
 
     const jobs = [
-        "Technicien HVAC", "Électricien Bâtiment", "Plombier Sanitaire", "Charpentier Bois",
-        "Soudeur TIG/MIG", "Mécanicien Auto", "Ouvrier BTP", "Peintre Bâtiment", "Maçon VRD",
-        "Conducteur Engins TP", "Couvreur Zingueur", "Vitrier Poseur", "Plaquiste",
-        "Carreleur Mosaïste", "Poseur Sols", "Tôlier Carrossier", "Chaudronnier Industriel",
-        "Serrurier Métallier", "Installateur PV", "Réparateur Électroménager", "Technicien Éolien",
-        "Frigoriste", "Ascensoriste", "Opérateur CNC", "Installateur Fibre", "Agent Maintenance Multi",
-        "Conducteur SPL", "Grutier Mobile", "Monteur Échafaudage", "Électromécanicien"
-    ];
+"Mason","Plumber","Electrician","Painter (building)","Tiler","Roofer","Carpenter","Locksmith","Drywall Installer (Plasterer)","Glazier","Steel Fixer (Rebar Worker)","Scaffolder","Floor and Wall Covering Installer","Auto Mechanic","Motorcycle Mechanic",
+"Industrial Maintenance Technician","Appliance Repair Technician","Sanitary Equipment Installer","Bicycle Repairer","Metalworker / Metal Locksmith",
+"Auto Body Technician (Panel Beater)","Cabinetmaker","Upholsterer","Parquet Floor Installer","Blacksmith","Stonecutter","Ornamental Plasterer (Staffer)","Stained Glass Maker","Decorative Painter","Ceramic Artist","Sculptor","Leatherworker","Engraver","Jeweler","Watchmaker","Fashion Designer / Pattern Maker",
+"Tailor / Dressmaker","Garment Alteration Specialist","Embroiderer","Saddler","Weaver","Baker","Pastry Chef","Chocolatier","Butcher","Fishmonger","Cheesemaker","Ice Cream Maker","Gardener","Landscape Gardener","Tree Pruner / Arborist","Beekeeper","Market Gardener",
+"Horticulturist","Delivery Driver","Warehouse Worker","Order Picker","Forklift Operator","Hairdresser","Beautician / Esthetician","Nail Technician",
+"Massage Therapist","Home Helper / Domestic Worker","Cleaner / Cleaning Agent"];
 
     function handleInput(event){
-        setInputValue(event.target.value);    
+        setInputValue(event.target.value);
     }
 
     const handleClick = () => {
         setTrade(inputValue);
         navigate("/app");
-      };
+    };
 
     return (
         <section
