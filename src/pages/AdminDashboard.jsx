@@ -5,83 +5,256 @@ import { useNavigate } from "react-router-dom";
 function AdminDashboard() {
   const [userProfile, setUserProfile] = useState(null);
   const [users, setUsers] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [search, setSearch] = useState("");
+  const [searchReviews, setSearchReviews] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentPageUsers, setCurrentPageUsers] = useState(1);
+  const [currentPageReviews, setCurrentPageReviews] = useState(1);
+  const usersPerPage = 5;
+  const reviewsPerPage = 5;
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
-        navigate("/"); // Not logged in
+        navigate("/");
         return;
       }
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("user_id, name, role")
         .eq("user_id", user.id)
         .single();
-      console.log("Profile fetch error:", error, "data:", data);
       if (error || !data || data.role !== "admin") {
-        navigate("/"); // Not admin
+        navigate("/");
         return;
       }
       setUserProfile(data);
-      console.log("Fetched profile:", data);
     };
     fetchProfile();
   }, [navigate]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUsersAndReviews = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // Récupérer utilisateurs
+      const { data: usersData, error: usersError } = await supabase
         .from("profiles")
-        .select("user_id, name, email, role, created_at");
-      if (!error) setUsers(data);
+        .select("user_id, name, role, created_at");
+
+      // Récupérer reviews avec jointure pour nom du reviewer
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from("reviews")
+        .select(`
+          id,
+          comment,
+          created_at,
+          reviewer:reviewer_id (
+            user_id,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (usersError) console.error("Error fetching users:", usersError);
+      if (reviewsError) console.error("Error fetching reviews:", reviewsError);
+
+      setUsers(usersData || []);
+      setReviews(reviewsData || []);
       setLoading(false);
     };
+
     if (userProfile && userProfile.role === "admin") {
-      fetchUsers();
+      fetchUsersAndReviews();
     }
   }, [userProfile]);
+
+  const handleDeleteUser = async (userId, role) => {
+    if (role === "admin") return;
+    if (!window.confirm("Are you sure you want to delete this account?")) return;
+    const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
+    if (error) {
+      alert("Failed to delete user: " + error.message);
+      return;
+    }
+    setUsers(users.filter((u) => u.user_id !== userId));
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+    if (error) {
+      alert("Failed to delete review: " + error.message);
+      return;
+    }
+    setReviews(reviews.filter((r) => r.id !== reviewId));
+  };
+
+  // Filtrer utilisateurs par nom ou email (email non récupéré ici pour la confidentialité, donc on enlève email)
+  const filteredUsers = users.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Filtrer reviews par nom du reviewer ou contenu du commentaire
+  const filteredReviews = reviews.filter((r) =>
+    r.reviewer?.name?.toLowerCase().includes(searchReviews.toLowerCase()) ||
+    r.comment.toLowerCase().includes(searchReviews.toLowerCase())
+  );
+
+  // Pagination
+  const indexOfLastUser = currentPageUsers * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+
+  const indexOfLastReview = currentPageReviews * reviewsPerPage;
+  const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
+  const currentReviews = filteredReviews.slice(indexOfFirstReview, indexOfLastReview);
+
+  const paginateUsers = (pageNumber) => setCurrentPageUsers(pageNumber);
+  const paginateReviews = (pageNumber) => setCurrentPageReviews(pageNumber);
 
   if (!userProfile) return <div className="p-8">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+      <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg p-8">
         <h1 className="text-3xl font-bold mb-4 text-blue-700">Admin Dashboard</h1>
-        <p className="mb-8 text-gray-600">Welcome, {userProfile.name}!</p>
-        <h2 className="text-xl font-semibold mb-4">User Management</h2>
-        {loading ? (
-          <div>Loading users...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border text-sm">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="py-2 px-4 border">Name</th>
-                  <th className="py-2 px-4 border">Email</th>
-                  <th className="py-2 px-4 border">Role</th>
-                  <th className="py-2 px-4 border">Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.user_id}>
-                    <td className="py-2 px-4 border">{u.name}</td>
-                    <td className="py-2 px-4 border">{u.email}</td>
-                    <td className="py-2 px-4 border">{u.role}</td>
-                    <td className="py-2 px-4 border">{new Date(u.created_at).toLocaleDateString()}</td>
+        <p className="mb-6 text-gray-600">Welcome, {userProfile.name}!</p>
+
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Users</h2>
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mb-4 px-4 py-2 border rounded w-full"
+          />
+          {loading ? (
+            <div>Loading users...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-4 border">Name</th>
+                    <th className="py-2 px-4 border">Role</th>
+                    <th className="py-2 px-4 border">Registered</th>
+                    <th className="py-2 px-4 border">Actions</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {currentUsers.map((u) => (
+                    <tr key={u.user_id}>
+                      <td className="py-2 px-4 border">{u.name}</td>
+                      <td className="py-2 px-4 border">{u.role}</td>
+                      <td className="py-2 px-4 border">
+                        {new Date(u.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-2 px-4 border">
+                        {u.role !== "admin" && (
+                          <button
+                            onClick={() => handleDeleteUser(u.user_id, u.role)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex justify-center mt-4 space-x-2">
+                {[...Array(Math.ceil(filteredUsers.length / usersPerPage)).keys()].map(
+                  (n) => (
+                    <button
+                      key={n + 1}
+                      onClick={() => paginateUsers(n + 1)}
+                      className={`px-3 py-1 rounded ${
+                        currentPageUsers === n + 1
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      {n + 1}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Reviews</h2>
+          <input
+            type="text"
+            placeholder="Search reviews by name or comment..."
+            value={searchReviews}
+            onChange={(e) => setSearchReviews(e.target.value)}
+            className="mb-4 px-4 py-2 border rounded w-full"
+          />
+
+          {reviews.length === 0 ? (
+            <p>No reviews available.</p>
+          ) : (
+            <>
+              <ul className="space-y-4">
+                {currentReviews.map((review) => (
+                  <li
+                    key={review.id}
+                    className="border p-4 rounded shadow-sm bg-gray-50"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold">
+                          {review.reviewer?.name || "Unknown Reviewer"}
+                        </p>
+                        <p className="text-gray-700">{review.comment}</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteReview(review.id)}
+                        className="text-red-600 hover:underline text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </ul>
+              <div className="flex justify-center mt-4 space-x-2">
+                {[...Array(Math.ceil(filteredReviews.length / reviewsPerPage)).keys()].map(
+                  (n) => (
+                    <button
+                      key={n + 1}
+                      onClick={() => paginateReviews(n + 1)}
+                      className={`px-3 py-1 rounded ${
+                        currentPageReviews === n + 1
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      {n + 1}
+                    </button>
+                  )
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-export default AdminDashboard; 
+export default AdminDashboard;
