@@ -8,6 +8,7 @@ import ResetPassword from "./components/ResetPassword";
 import LoginForm from "./components/LoginForm";
 import ServiceRequestsPage from "./pages/ServiceRequestsPage";
 import { ToastContainer } from 'react-toastify';
+import AdminDashboard from "./pages/AdminDashboard";
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/inbox" element={<MyInbox />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/service-requests" element={<ServiceRequestsPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
       <ToastContainer />
     </BrowserRouter>
